@@ -1,0 +1,226 @@
+{
+  "titulo": "API de Consultas DW",
+  "grupos": [
+    {
+      "nombre": "Transferencias 650",
+      "endpoints": [
+        {
+          "nombre": "Lotes 650",
+          "path": "Transferencias650/Lotes650",
+          "parametros": [
+          { "nombre": "cod_ordenante", "label": "Código de Ordenante: ", "tipo": "str" },
+          { "nombre": "fec_ini_pago", "label": "Fecha Desde: ", "tipo": "date" },
+          { "nombre": "fec_fin_pago", "label": "Fecha Hasta: ", "tipo": "date" }
+          ],
+          "headers": {
+            "cod_ordenante": "Cod Ordenante",
+            "id_operacion": "Nro Lote",
+            "fec_pago": "Fecha Pago",
+            "imp_cesion": "Tot Imp Lote",
+            "cant_trans": "Tot Trans Lote"
+          }
+        },
+        {
+          "nombre": "Detalle Lotes 650",
+          "path": "Transferencias650/DetLote650",
+          "parametros": [
+            { "nombre": "cod_ordenante", "label": "Código de Ordenante: ", "tipo": "str" },
+            { "nombre": "fec_ini_pago", "label": "Fecha Desde: ", "tipo": "date" },
+            { "nombre": "fec_fin_pago", "label": "Fecha Hasta: ", "tipo": "date" }
+          ],
+          "headers": {
+            "cod_ordenante": "Cod Ordenante",
+            "id_operacion": "Nro Lote",
+            "fec_pago": "Fecha Pago",
+            "imp_cesion": "Tot Imp Lote",
+            "cant_trans": "Tot Trans Lote",
+            "num_orden": "Orden Lote",
+            "imp_orden": "Imp Trans Lote",
+            "num_cbu_destino": "CBU Destino"
+          }
+        },
+        {
+          "nombre": "Productos 650 Vigentes",
+          "path": "Transferencias650/Prod650Vig",
+          "parametros": [
+            { "nombre": "cuit", "label": "CUIT", "tipo": "int" }
+          ],
+          "headers": {
+            "cod_ordenante": "Cod Ordenante",
+            "fec_alta_contrato": "Fec Alta Contrato",
+            "cod_modalidad_producto": "Cod Modalidad",
+            "desc_modalidad_producto": "Descr Modalidad",
+            "id_d_contrato_debito": "Contrato Cta Débito",
+            "suc_cta_debito": "Suc Cta Débito",
+            "prod_cta_debito": "Prod Cta Débito",
+            "num_cta_debito": "Num Cta Débito",
+            "fec_ult_lote": "Fec Ult Lote"
+          }
+        }
+      ]
+    },
+    {
+      "nombre": "Rendic/Movimientos ",
+      "endpoints": [
+        {
+          "nombre": "Rendiciones Entes Públicos/Privados",
+          "path": "Rendiciones/Entes",
+          "parametros": [
+            { "nombre": "cod_convenio", "label": "Código Ente", "tipo": "int" , "opcional": true },
+            { "nombre": "cod_sub_convenio", "label": "Código Sub-Ente" , "tipo": "int" , "opcional": true },
+            { "nombre": "cod_ubicacion", "label": "Código Sucursal", "tipo": "int", "opcional": true },
+            { "nombre": "fec_ini_rend", "label": "Fecha Rendición Desde", "tipo": "date" },
+            { "nombre": "fec_fin_rend", "label": "Fecha Rendición Hasta", "tipo": "date" }            
+          ],
+          "headers": {
+            "cod_ente": "Ente",
+            "cod_subente": "SubEnte",
+            "fecha_pago": "Fec Pago",
+            "fecha_rendicion": "Fec Rendición",
+            "cod_banco": "Banco",
+            "cod_ubicacion": "Sucursal",
+            "num_terminal": "Terminal",
+            "num_comprobante": "Comprobante",
+            "imp_cobrado": "Imp Cobrado",
+            "imp_retencion": "Imp Retención",
+            "imp_comision": "Imp Comisión",
+            "cod_barra": "Cod Barra",
+            "banco_cheque": "Bco Cheque",
+            "num_cheque": "Num Cheque",
+            "estado_rendicion": "Estad Rendi",
+            "forma_pago": "Form Pago"            
+          }
+        },
+        {
+          "nombre": "Consulta de Movimientos",
+          "path": "Rendiciones/MovCtas",
+          "parametros": [
+            { "nombre": "cod_ubicacion", "label": "Sucursal", "tipo": "int"},
+            { "nombre": "cod_producto", "label": "Producto" , "tipo": "int"},
+            { "nombre": "num_cuenta", "label": "Cuenta", "tipo": "int"},
+            { "nombre": "fec_ini_mvto", "label": "Fecha Movimiento Desde", "tipo": "date" },
+            { "nombre": "fec_fin_mvto", "label": "Fecha Movimiento Hasta", "tipo": "date" }            
+          ],
+          "headers": {
+            "cod_conv": "Convenio",
+            "fec_evento": "Fec Movimiento",
+            "hora_evento": "Hora Movimiento",
+            "fec_valor": "Fec Valor Mvto",
+            "imp_mvto": "Imp Movimiento",
+            "desc_mvto": "Desc Movimiento"                  
+          }
+        }
+      ]
+    },
+    {
+      "nombre": "Entidades",
+      "endpoints": [
+        {
+          "nombre": "Entes Publicos/Privados",
+          "path": "Entidades/EntPubPriv",
+          "parametros": [],
+          "headers": {
+            "cod_ente": "Ente",
+            "cod_subente": "SubEnte",
+            "descrip_ente": "Descrip Ente",
+            "cuit_ente": "CUIT Ente",
+            "suc_cta": "Suc Cta",
+            "prod_cta": "Prod Cta",
+            "num_cta": "Num Cta",
+            "fec_inicio_act": "Fec Ini Activ",
+            "fec_fin_act": "Fec Fin Activ",
+            "clasif_ente": "Clasif Ente",
+            "modo_capt": "Captura Ente",
+            "forma_acred": "Form Acredit",
+            "conc_liquid": "Concep Liq",
+            "porc_comi": "Porc Comi",
+            "min_comi": "Min Comi",
+            "max_comi": "Max Comi",
+            "porc_rete": "Porc Rete",
+            "form_arch_rend": "Formato Archi",
+            "form_list_rend": "Formato List"
+          }
+        },
+        {
+          "nombre": "Convenios RUIT",
+          "path": "Entidades/RuitConv",
+          "parametros": [],
+          "headers": {
+            "cod_convenio": "Convenio",
+            "fec_alta_convenio": "Fec Alta Convenio",
+            "jur_const": "Jurisd Constat",
+            "pct_const": "Porc Constat",
+            "form_ruit": "Formul Ruit",
+            "aut_const": "Autorid Constat",
+            "jur_ruit": "Jurisd Ruit",
+            "pct_jur": "Porc Jurisd"
+          }
+        },
+        {
+          "nombre": "Jurisdicciones RUIT",
+          "path": "Entidades/RuitJurisd",
+          "parametros": [],
+          "headers": {
+            "num_jurisd": "Num Jurisdicción",
+            "nom_jurisd": "Nom Jurisdicción",
+            "fec_alta_jurisd": "Fec Alta Jurisd",
+            "imp_base_dist": "Mto Base Distrib",
+            "num_cbu": "Num CBU"            
+          }
+        },
+        {
+          "nombre": "Convenios por Ente",
+          "path": "Convenios/PorEnte",
+          "pagina": "convenios.html",
+          "parametros": [
+            { "nombre": "id_ente", "label": "Seleccione un Ente", "tipo": "combo" }
+          ],
+            "headersDisenios": {
+              "id_diseño": "ID Diseño",
+              "nombre_diseño": "Nombre Diseño",
+              "longitud_diseño": "Long Diseño",
+              "fecha_alta": "Fecha Alta",
+              "fecha_baja": "Fecha Baja",
+              "tipo_importe": "Tipo Importe",
+              "contiene_dv": "Contiene DV",
+              "desactivarcontroldv": "DV Desactivado"
+            },
+            "headersDetalles": {
+              "nombre": "Campo",
+              "desde": "Desde",
+              "longitud": "Longitud",
+              "valores_admitidos": "Val Admitidos",
+              "mínimos_maximos": "Rango Mín-Máx",
+              "detectable": "Detectable",
+              "descripcion": "Descripcion",
+              "posicion_identificador": "Pos Identif",
+              "tipo_dv": "Tipo DV",
+              "condicion_registro_id": "Cond Reg ID",
+              "fecha_alta": "Fecha Alta",
+              "fecha_baja": "Fecha Baja"
+            },
+            "headersCobranza": {
+              "cob_efec": "Efec",
+              "cob_ch": "Cheq",
+              "cob_ch_varios": "Cheq Vs",
+              "débito": "Débito",
+              "debcre_pesos": "Déb Cred $",
+              "debcre_dolar": "Déb Cred U$S",
+              "cobro_1venc": "1° Venc",
+              "cobro_2venc": "2° Venc",
+              "cobro_3venc": "3° Venc",
+              "cant_copias_ticket": "Cant Tick",
+              "dias_de_gracia1": "Días Gcia 1",
+              "dias_de_gracia2": "Días Gcia 2",
+              "dias_de_gracia3": "Días Gcia 3",
+              "dias_de_ghabil": "Días Háb",
+              "control_duplicados": "Ctrol Dup",
+              "condicion_registro_id": "Cond Reg ID",
+              "fecha_alta": "Fecha Alta",
+              "fecha_baja": "Fecha Baja"
+            }
+        }
+      ]
+    }
+  ]
+}

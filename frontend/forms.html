@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+   <!-- Encabezado fijo que se encogerá al hacer scroll -->
+   <header class="main-header">
+    <div class="header-content">
+         <div class="header-text">BP | DESARROLLO - SECTOR PUBLICO</div>
+    </div>
+  </header>
+
+  <!-- Contenido principal de la página -->
+  <main class="container">
+    <!-- Sección de introducción con título y subtítulo -->
+    <div class="page-intro">
+        <h1 id="endpoint-titulo">Detalle Lotes 650</h1>
+    </div>
+    <div class="form-container">
+      <form id="consulta-form" novalidate></form>
+      <div class="button-container">
+        <button id="exportar-btn" class="btn btn-secondary" onclick="exportarExcel()" disabled>Exportar a Excel</button>
+        <button class="btn btn-outline" onclick="location.href='index.html'">Volver</button>
+      </div>
+        <div id="spinner" >⏳ Consultando...</div>
+    </div> 
+    <!-- Seccion de errores -->
+    <div id="errorMsg" style="display:none; color: red; margin-top: 10px;"></div>
+ 
+  </main>
+
+  <div id="tabla-wrapper" style="display: none;">
+    <div id="total-registros" class="total-registros"></div>
+    <div id="tabla-container" class="grid-wrapper"></div>
+  </div>
+  <div class="pagination" id="pagination" style="display:none">
+    <button id="prev-btn">Anterior</button>
+    <span id="pagina-actual" style="margin: 0 10px;"></span>
+    <button id="next-btn">Siguiente</button>
+  </div>
+
+  <script>
+    let currentPage = 1;
+    let pageSize = 20;
+    let paginatedData = [];
+    let parametrosDelEndpoint = []; // creo esta variable para guardar los parametros del endpoint
+    let headersDelEndpoint = {}; // creo esta variable para guardar los headers del endpoint
+    let ordenActual = null;
+    let ordenAscendente = true;
+    const urlParams = new URLSearchParams(window.location.search);
+    const endpointName = urlParams.get('endpoint');
+    const configPath = 'config.json';
+
+    fetch(configPath)
+      .then(response => response.json())
+      .then(config => {
+        const grupo = config.grupos.find(g => g.endpoints.some(e => e.path === endpointName));
+        const endpoint = grupo.endpoints.find(e => e.path === endpointName);
+        headersDelEndpoint = endpoint.headers || {};
+        
+        document.getElementById('endpoint-titulo').textContent = endpoint.nombre;
+        const form = document.getElementById('consulta-form');
+        
+        endpoint.parametros.forEach(param => {
+          parametrosDelEndpoint = endpoint.parametros; // ✅ los guardamos para luego usarlos
+          const group = document.createElement('div');
+          group.className = 'form-group';
+          if (param.opcional) group.classList.add('opcional');
+
+          const label = document.createElement('label');
+          label.textContent = param.label;
+          label.setAttribute('for', param.nombre);
+
+          const input = document.createElement('input');
+          input.id = param.nombre;
+          input.name = param.nombre;
+          input.required = true;
+          input.type = param.nombre.toLowerCase().includes('fec') || param.nombre.toLowerCase().includes('fecha') ? 'date' : 'text';
+
+          if (param.nombre === 'cuit') {
+            const descDiv = document.createElement('div');
+            descDiv.id = 'descripcion-ordenante';
+            descDiv.style.marginTop = '5px';
+            descDiv.style.fontWeight = 600;
+            descDiv.style.fontStyle = 'italic';
+            descDiv.style.color = 'var(--primary-green)';
+            group.appendChild(descDiv);
+          }
+
+          const error = document.createElement('span');
+          error.style.display = 'none';
+          error.textContent = 'Este campo es obligatorio';
+
+          group.appendChild(label);
+          group.appendChild(input);
+          group.appendChild(error);
+
+          form.appendChild(group);
+        });
+
+        const submitBtn = document.createElement('button');
+        submitBtn.textContent = 'Consultar';
+        submitBtn.type = 'button';
+        submitBtn.className = 'btn btn-primary';
+        submitBtn.onclick = () => consultar(endpoint.path);
+
+        document.querySelector('.button-container').insertBefore(submitBtn, document.getElementById('exportar-btn'));
+
+    });
+
+    function consultar(path) {
+      // 1. Validación por tipo
+      if (!validarFormulario(parametrosDelEndpoint)) {
+        return; // Detener si hay errores de validación
+      }
+
+      // 2. Mostrar spinner y preparar interfaz
+      const spinner = document.getElementById('spinner');
+      const exportBtn = document.getElementById('exportar-btn');
+      const pagination = document.getElementById('pagination');
+      const tablaWrapper = document.getElementById("tabla-wrapper");
+      const tablaContainer = document.getElementById('tabla-container');
+
+      exportBtn.disabled = true;
+      pagination.style.display = 'none';
+      tablaWrapper.style.display = "none";
+      tablaContainer.innerHTML = ""; // Limpiar tabla anterior
+      document.getElementById("total-registros").textContent = "";
+      
+      spinner.style.display = 'block';
+
+      // 3. Validar campos requeridos manualmente (por si no usás validarFormulario para eso)
+      let valido = true;
+      document.querySelectorAll('.form-group').forEach(group => {
+        if (group.classList.contains('opcional')) return;
+
+        const input = group.querySelector('input');
+        const error = group.querySelector('span');
+        if (!input.value.trim()) {
+          error.style.display = 'block';
+          valido = false;
+        } else {
+          error.style.display = 'none';
+        }
+      });
+
+      if (!valido) {
+        spinner.style.display = 'none';
+        return;
+      }
+
+      // 3.5 Busco la descripcion del CUIT si el endpoint es Prod650Vig
+      const cuitInput = document.getElementById('cuit');
+      const cuit = cuitInput ? cuitInput.value.trim() : '';
+      
+      if (endpointName === 'Transferencias650/Prod650Vig' && cuit) {
+        fetch(`${window.location.origin}/api/Transferencias650/OrdenanteDesc?cuit=${cuit}`)
+          .then(res => res.json())
+          .then(data => {
+            document.getElementById('descripcion-ordenante').textContent = `Descripción Ordenante : ${data.desc_ordenante}`;
+          })
+          .catch(() => {
+            document.getElementById('descripcion-ordenante').textContent = 'No se pudo obtener la descripción del ordenante.';
+          });
+      }
+
+
+      // 4. Armar parámetros solo con campos no vacíos
+      const params = new URLSearchParams();
+      document.querySelectorAll('#consulta-form input').forEach(input => {
+        if (input.value.trim()) {
+          params.append(input.name, input.value);
+        }
+      });
+
+      // 5. Llamar al endpoint
+      const apiBase = `${window.location.origin}/api`;
+            
+      fetch(`${apiBase}/${path}?${params.toString()}`)
+        .then(res => res.json())
+        .then(data => {
+          spinner.style.display = 'none';
+          paginatedData = data;
+          currentPage = 1;
+
+          if (!data.length) {
+            tablaContainer.innerHTML = '<div class="sin-datos">NO HAY DATOS PARA MOSTRAR.</div>';
+            tablaWrapper.style.display = "block";
+            return;
+          }
+
+          // Mostrar tabla
+          exportBtn.disabled = false;
+          document.getElementById("total-registros").textContent = `TOTAL DE REGISTROS: ${paginatedData.length}`;
+          mostrarPagina();
+          pagination.style.display = 'flex';
+        })
+        .catch(() => {
+          spinner.style.display = 'none';
+          tablaContainer.innerHTML = '<p style="color:red">Error al consultar el endpoint.</p>';
+          tablaWrapper.style.display = "block";
+        });
+    }
+
+    function mostrarPagina() {
+      const start = (currentPage - 1) * pageSize;
+      const end = start + pageSize;
+      const pageData = paginatedData.slice(start, end);
+
+      if (!pageData.length) {
+        document.getElementById('tabla-container').innerHTML = '<div class="sin-datos">NO HAY DATOS PARA MOSTRAR.</div>';
+        return;
+      }
+
+      const headers = Object.keys(pageData[0]);
+      let table = '<table><thead><tr>';
+      headers.forEach(key => {
+        const label = headersDelEndpoint[key] || key.toUpperCase();
+        const flecha = ordenActual === key
+          ? (ordenAscendente ? '▲' : '▼')
+          : '⇅'; // Indicador neutro
+        table += `<th class="sortable" onclick="ordenarPor('${key}')">
+                ${label} <span class="sort-arrow">${flecha}</span>
+                </th>`;
+      });
+      table += '</tr></thead><tbody>';
+
+      pageData.forEach(row => {
+        table += '<tr>';
+        headers.forEach(key => {
+          const val = row[key] ?? "";
+          if (key.toLowerCase().startsWith('imp_') && !isNaN(val)) {
+            const num = parseFloat(val);
+            const cellContent = num.toLocaleString('es-AR', {
+              style: 'currency',
+              currency: 'ARS',
+              minimumFractionDigits: 2
+            });
+            table += `<td class="importe">${cellContent}</td>`;
+          } else {
+            table += `<td>${val}</td>`;
+          }
+        });
+        table += '</tr>';
+      });
+
+      table += '</tbody></table>';
+      document.getElementById("tabla-wrapper").style.display = "block";
+      document.getElementById("tabla-container").innerHTML = table;
+      
+      mostrarPaginacion();  // 🔁 ACTUALIZA CONTROLES
+    }
+
+    function mostrarPaginacion() {
+      const totalPages = Math.ceil(paginatedData.length / pageSize);
+      document.getElementById('pagina-actual').textContent = `Página ${currentPage} de ${totalPages}`;
+
+      document.getElementById('prev-btn').disabled = currentPage === 1;
+      document.getElementById('next-btn').disabled = currentPage === totalPages;
+    }
+
+    function ordenarPor(campo) {
+      if (ordenActual === campo) {
+        ordenAscendente = !ordenAscendente;
+      } else {
+        ordenActual = campo;
+        ordenAscendente = true;
+      }
+
+      paginatedData.sort((a, b) => {
+        const valorA = a[campo];
+        const valorB = b[campo];
+
+        if (typeof valorA === 'number' && typeof valorB === 'number') {
+          return ordenAscendente ? valorA - valorB : valorB - valorA;
+        } else {
+          return ordenAscendente
+            ? String(valorA).localeCompare(String(valorB))
+            : String(valorB).localeCompare(String(valorA));
+        }
+      });
+
+      mostrarPagina(currentPage);
+    }
+
+    document.getElementById('prev-btn').onclick = () => {
+      if (currentPage > 1) {
+        currentPage--;
+        mostrarPagina();
+      }
+    };
+
+    document.getElementById('next-btn').onclick = () => {
+      if ((currentPage * pageSize) < paginatedData.length) {
+        currentPage++;
+        mostrarPagina();
+      }
+    };
+
+    function validarFormulario(parametros) {
+      for (const param of parametros) {
+      const valor = document.getElementById(param.nombre).value.trim();
+
+      if (param.obligatorio && valor === "") {
+        mostrarError(`El campo "${param.label}" es obligatorio.`);
+        return false;
+      }
+
+      if (valor !== "") {
+        if (param.tipo === "int" && isNaN(parseInt(valor))) {
+          mostrarError(`El campo "${param.label}" debe ser un número entero.`);
+          return false;
+        }
+        if (param.tipo === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+          mostrarError(`El campo "${param.label}" debe tener formato YYYY-MM-DD.`);
+          return false;
+        }
+      }
+      }
+
+      ocultarError();  // Si pasó todas las validaciones
+      return true;
+    }
+
+    function mostrarError(msg) {
+      const div = document.getElementById("errorMsg");
+      div.innerText = msg;
+      div.style.display = "block";
+    }
+
+    function ocultarError() {
+      const div = document.getElementById("errorMsg");
+      div.innerText = "";
+      div.style.display = "none";
+    }
+
+    function exportarExcel() {
+      const wb = XLSX.utils.book_new();
+      const enteId = document.getElementById('ente-select').value.trim().split(' ')[0];
+      const disenioId = disenioSeleccionado;
+
+      // 🟢 Agregar solo la fila seleccionada de Diseños
+      const diseniosTable = document.getElementById('tabla-disenos').querySelector('table');
+      if (diseniosTable) {
+          const headers = Array.from(diseniosTable.rows[0].cells).map(cell => cell.innerText);
+          const filaSeleccionada = Array.from(diseniosTable.querySelectorAll('tr')).find(tr => {
+              const firstCell = tr.cells[0];
+              return firstCell && firstCell.innerText == disenioId;
+          });
+          if (filaSeleccionada) {
+              const rowData = Array.from(filaSeleccionada.cells).map(cell => cell.innerText);
+              const ws = XLSX.utils.aoa_to_sheet([headers]); // Solo headers
+
+              // 📝 Forzar cada celda manualmente
+              rowData.forEach((value, colIdx) => {
+                  const cellRef = XLSX.utils.encode_cell({ r: 1, c: colIdx });
+                  const esTextoForzado =
+                      (typeof value === 'number' && value.toString().length > 20) || // Nros muy largos
+                      (typeof value === 'string' && (
+                          /^\d+$/.test(value) ||        // Solo dígitos
+                          /^0\d+/.test(value) ||       // Con ceros a la izquierda
+                          /\d{5,}/.test(value)         // Secuencias largas
+                      ));
+                  ws[cellRef] = {
+                      v: value,
+                      t: esTextoForzado ? 's' : 's' // Fuerza todo como string
+                  };
+              });
+
+              XLSX.utils.book_append_sheet(wb, ws, 'Diseño');
+          }
+      }
+
+      function agregarHoja(tablaId, nombreHoja) {
+          const tabla = document.getElementById(tablaId).querySelector('table');
+          if (tabla) {
+              const ws = XLSX.utils.aoa_to_sheet([]);
+              const rows = Array.from(tabla.rows);
+              rows.forEach((tr, rowIdx) => {
+                  Array.from(tr.cells).forEach((cell, colIdx) => {
+                      const value = cell.innerText;
+                      const cellRef = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
+                      const esTextoForzado =
+                          (typeof value === 'number' && value.toString().length > 20) ||
+                          (typeof value === 'string' && (
+                              /^\d+$/.test(value) ||        // Solo dígitos
+                              /^0\d+/.test(value) ||       // Con ceros a la izquierda
+                              /\d{5,}/.test(value)         // Secuencias largas
+                          ));
+                      ws[cellRef] = {
+                          v: value,
+                          t: esTextoForzado ? 's' : 's' // Fuerza todo como string
+                      };
+                  });
+              });
+              XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+          }
+      }
+
+      agregarHoja('tabla-detalles', 'Detalle Diseño');
+      agregarHoja('tabla-config', 'Configuración Cobranza');
+
+      XLSX.writeFile(wb, `ConveniosEnte${enteId}_Diseño${disenioId}.xlsx`);
+    }
+
+
+    window.addEventListener('scroll', function() {
+            const header = document.querySelector('.main-header');
+            // Si el scroll vertical es mayor a 50px, añade la clase 'shrink'
+            if (window.scrollY > 50) {
+                header.classList.add('shrink');
+            } else {
+                // Si no, la remueve
+                header.classList.remove('shrink');
+            }
+    });
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>

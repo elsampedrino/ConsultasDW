@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Convenios por Ente</title>
+    <link rel="stylesheet" href="estilos.css">    
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+           <div class="header-text">BP | DESARROLLO - SECTOR PUBLICO</div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="page-intro">
+            <h1 id="endpoint-titulo">Convenios Por Ente</h1>
+        </div>
+
+        <div class="top-controls">
+            <div class="form-group">
+                <label for="ente-select">Seleccione Ente:</label>
+                <select id="ente-select" onchange="cargarDisenios()">
+                    <option value="">-- Entes --</option>
+                </select>
+            </div>
+            <div class="button-container">
+                <button id="exportar-btn" class="btn btn-secondary" onclick="exportarExcel()" disabled>Exportar a Excel</button>
+                <button class="btn btn-outline" onclick="location.href='index.html'">Volver</button>
+            </div>
+        </div>
+
+        <div id="spinner" style="display: none;">⏳ Consultando...</div>
+
+        <div id="diseños-entes" class="grid-wrapper" style="display:none">
+            <h2>Diseños de Códigos de Barra</h2>
+            <div id="tabla-disenos"></div>
+        </div>
+    </main>
+    
+        <div id="detalle-diseños" class="grid-wrapper" style="display:none">
+            <h2>Detalles de Diseño</h2>
+            <div id="tabla-detalles"></div>
+        </div>
+        <div id="detalle-cobranza" class="grid-wrapper" style="display:none">
+            <h2 style="margin-top: 30px;">Configuración de Cobranza</h2>
+            <div id="tabla-config"></div>
+        </div>
+       
+    <script>
+        let headersDisenios = {};
+        let headersDetalles = {};
+        let headersCobranza = {};
+        let disenioSeleccionado = null;        
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('config.json')
+                .then(resp => resp.json())
+                .then(config => {
+                    const grupo = config.grupos.find(g => g.nombre === 'Entidades');
+                    const endpoint = grupo.endpoints.find(e => e.path === 'Convenios/PorEnte');
+                    headersDisenios = endpoint.headersDisenios || {};
+                    headersDetalles = endpoint.headersDetalles || {};
+                    headersCobranza = endpoint.headersCobranza || {};
+                });
+
+            cargarEntes();
+        });
+
+        function cargarEntes() {
+            fetch('/api/Convenios/Entes')
+                .then(resp => resp.json())
+                .then(data => {
+                    const select = document.getElementById('ente-select');
+                    select.innerHTML = '<option value="">-- Entes --</option>';
+                    data.forEach(ente => {
+                        const option = document.createElement('option');
+                        option.value = ente.id_ente;
+                        option.textContent = `${ente.id_ente} - ${ente.nombre_corto}`;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(err => {
+                    console.error("Error al cargar los entes:", err);
+                    alert("No se pudieron cargar los entes.");
+                });
+        }
+
+        function cargarDisenios() {
+            const enteId = document.getElementById('ente-select').value;
+            disenioSeleccionado = null;
+            if (!enteId) return;
+
+            console.log("Cargando diseños para el ente:", enteId);
+            document.getElementById('spinner').style.display = 'block';
+            fetch(`/api/Convenios/DiseniosPorEnte?id_ente=${enteId}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    document.getElementById('diseños-entes').style.display = 'block';
+                    renderTablaDisenios('tabla-disenos', data, headersDisenios);
+                    document.getElementById('detalle-diseños').style.display = 'none'; // ✅ Ocultar grillas detalle/cobranza
+                    document.getElementById('detalle-cobranza').style.display = 'none'; // ✅ Ocultar grillas detalle/cobranza
+                    document.getElementById('spinner').style.display = 'none';
+                })
+                .catch(err => {
+                    console.error('Error cargando diseños:', err);
+                    alert('Ocurrió un error al cargar los diseños.');
+                    document.getElementById('spinner').style.display = 'none';
+                });
+        }
+
+        function cargarDetalleYCobranza(idDisenio) {
+            const enteId = document.getElementById('ente-select').value;
+            disenioSeleccionado = idDisenio;
+            if (!enteId || !idDisenio) return;
+
+            console.log("Cargando detalle y cobranza para el diseño:", idDisenio);
+            document.getElementById('spinner').style.display = 'block';
+            fetch(`/api/Convenios/DetallePorDisenio?id_ente=${enteId}&id_diseño=${idDisenio}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    console.log("Datos recibidos:", data);
+                    renderTabla('tabla-detalles', data.detalles_disenios, headersDetalles);
+                    renderTabla('tabla-config', data.configuracion_cobranza, headersCobranza);
+                    document.getElementById('detalle-diseños').style.display = 'block'; // ✅ Mostrar grillas detalle/cobranza
+                    document.getElementById('detalle-cobranza').style.display = 'block'; // ✅ Mostrar grillas detalle/cobranza
+                    document.getElementById('spinner').style.display = 'none';
+                    habilitarBotonExportar();
+                })
+                .catch(err => {
+                    console.error('Error cargando detalle y cobranza:', err);
+                    alert('Ocurrió un error al cargar los datos del diseño.');
+                    document.getElementById('spinner').style.display = 'none';
+                });
+        }
+
+        function renderTablaDisenios(containerId, data, headers) {
+            const container = document.getElementById(containerId);
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p>No hay diseños para mostrar.</p>';
+                return;
+            }
+
+            let table = '<table><thead><tr>';
+            Object.keys(data[0]).forEach(key => {
+                const label = headers[key] || key;
+                table += `<th>${label}</th>`;
+            });
+            table += '</tr></thead><tbody>';
+            data.forEach(row => {
+                table += '<tr>';
+                Object.keys(row).forEach((key, index) => {
+                    let value = row[key] ?? '';
+                    if (typeof value === 'boolean') value = value ? 'Sí' : 'No'; // ✅ True/False a Sí/No
+                    if (index === 0) { // Primer columna como enlace
+                        table += `<td><a href="#" onclick="cargarDetalleYCobranza('${value}')">${value}</a></td>`;
+                    } else {
+                        table += `<td>${value}</td>`;
+                    }
+                });
+                table += '</tr>';
+            });
+            table += '</tbody></table>';
+            container.innerHTML = table;
+        }
+
+        function renderTabla(containerId, data, headers) {
+            const container = document.getElementById(containerId);
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p>No hay datos para mostrar.</p>';
+                return;
+            }
+
+            let table = '<table><thead><tr>';
+            Object.keys(data[0]).forEach(key => {
+                const label = headers[key] || key;
+                table += `<th>${label}</th>`;
+            });
+            table += '</tr></thead><tbody>';
+            data.forEach(row => {
+                table += '<tr>';
+                Object.values(row).forEach(value => {
+                    if (typeof value === 'boolean') value = value ? 'Sí' : 'No'; // ✅ True/False a Sí/No
+                    table += `<td>${value ?? ''}</td>`;
+                });
+                table += '</tr>';
+            });
+            table += '</tbody></table>';
+            container.innerHTML = table;
+        }
+
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('.main-header');
+            // Si el scroll vertical es mayor a 50px, añade la clase 'shrink'
+            if (window.scrollY > 50) {
+                header.classList.add('shrink');
+            } else {
+                // Si no, la remueve
+                header.classList.remove('shrink');
+            }
+        });
+
+        function exportarExcel() {
+            const wb = XLSX.utils.book_new();
+            const enteId = document.getElementById('ente-select').value.trim().split(' ')[0];
+            const disenioId = disenioSeleccionado;
+
+            // 🟢 Agregar solo la fila seleccionada de Diseños
+            const diseniosTable = document.getElementById('tabla-disenos').querySelector('table');
+            if (diseniosTable) {
+                const headers = Array.from(diseniosTable.rows[0].cells).map(cell => cell.innerText);
+                const filaSeleccionada = Array.from(diseniosTable.querySelectorAll('tr')).find(tr => {
+                    const firstCell = tr.cells[0];
+                    return firstCell && firstCell.innerText == disenioId;
+                });
+
+                if (filaSeleccionada) {
+                    const rowData = Array.from(filaSeleccionada.cells).map(cell => cell.innerText);
+                    const wsData = [headers, rowData];
+
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                    // 📝 Forzar todo como texto para evitar notación científica
+                    Object.keys(ws).forEach(cell => {
+                        if (cell[0] !== '!') {
+                            ws[cell].t = 's';
+                        }
+                    });
+
+                    XLSX.utils.book_append_sheet(wb, ws, 'Diseño');
+                }
+            }
+
+            function agregarHoja(tablaId, nombreHoja) {
+                const tabla = document.getElementById(tablaId).querySelector('table');
+                if (tabla) {
+                    const rows = Array.from(tabla.rows).map(tr =>
+                        Array.from(tr.cells).map(cell => cell.innerText)
+                    );
+
+                    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+                    // 📝 Forzar todo como texto
+                    Object.keys(ws).forEach(cell => {
+                        if (cell[0] !== '!') {
+                            ws[cell].t = 's';
+                        }
+                    });
+
+                    XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+                }
+            }
+
+            // 🟢 Agregar las otras hojas
+            agregarHoja('tabla-detalles', 'Detalle Diseño');
+            agregarHoja('tabla-config', 'Configuración Cobranza');
+
+            // Archivo con nombre dinámico
+            XLSX.writeFile(wb, `ConveniosEnte${enteId}_Diseño${disenioId}.xlsx`);
+        }
+
+
+        function habilitarBotonExportar() {
+            const btnExportar = document.getElementById('exportar-btn');
+            const grillas = ['tabla-disenos', 'tabla-detalles', 'tabla-config'];
+            const todasConDatos = grillas.every(id => {
+                const tabla = document.getElementById(id).querySelector('table');
+                return tabla && tabla.rows.length > 1; // Verifica que haya más de 1 fila (header + datos)
+            });
+            btnExportar.disabled = !todasConDatos;
+        }
+
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>    
+</body>
+</html>

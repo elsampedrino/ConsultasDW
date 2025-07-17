@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <!-- Encabezado fijo que se encogerá al hacer scroll -->
+    <header class="main-header">
+      <div class="header-content">
+          <div class="header-text">BP | DESARROLLO - SECTOR PUBLICO</div>
+      </div>
+    </header>
+
+   <!-- Contenido principal de la página -->
+   <main class="container">
+    <!-- Sección de introducción con título y subtítulo -->
+    <div class="page-intro">
+        <h1 id="endpoint-titulo">Detalle Lotes 650</h1>
+    </div>
+      
+    <!-- Indicador de carga -->
+    <div id="spinner">⏳ Consultando...</div>
+    <!-- Botones -->
+    <div id="botones" class="button-container"></div>
+          
+    <!-- Grilla de resultados -->
+    <div id="tabla-wrapper" style="display: none;">
+      <div id="total-registros" class="total-registros"></div>
+      <div id="tabla-container"></div>      
+    </div>
+   
+    <!-- Paginación -->
+    <div id="paginacion" class="paginacion"></div>
+    
+</main>
+
+  <script>
+    let paginatedData = [];
+    let currentPage = 1;
+    const rowsPerPage = 15;
+    let endpointName = '';
+    let headersDelEndpoint = {};
+    let ordenActual = null;
+    let ordenAscendente = true;
+    const configPath = 'config.json';
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      endpointName = params.get("endpoint");
+
+      // Obtener nombre descriptivo del endpoint
+      fetch(configPath)
+        .then(resp => resp.json())
+        .then(config => {
+          let nombre = '';
+          config.grupos.forEach(grupo => {
+            grupo.endpoints.forEach(ep => {
+              if (ep.path === endpointName) {
+                nombre = ep.nombre;
+                headersDelEndpoint = ep.headers || {};                
+              }
+            });
+          });
+          document.getElementById('endpoint-titulo').textContent = nombre;
+        });
+
+      // Mostrar "Consultando..."
+      document.getElementById("spinner").style.display = "block";
+
+      // Obtener datos desde API
+      const apiBase = `${window.location.origin}/api`;
+
+      fetch(`${apiBase}/${endpointName}`)
+        .then(res => res.json())
+        .then(data => {
+          paginatedData = data;
+          document.getElementById("total-registros").textContent = `TOTAL DE REGISTROS: ${paginatedData.length}`;
+          mostrarPagina(1);
+          document.getElementById("spinner").style.display = "none";
+          let html = "";
+          html += `<button onclick="window.location.href='index.html'" class="btn btn-outline">Volver</button>`;
+          html += `<button onclick="exportarExcel()" class="btn btn-secondary">Exportar a Excel</button></div></div>`;
+          document.getElementById("botones").innerHTML = html;          
+        })
+        .catch(err => {
+          console.error('Error cargando datos:', err);
+          document.getElementById("spinner").textContent = "Error al cargar los datos.";
+        });
+    });
+
+    function mostrarPagina(pagina) {
+      currentPage = pagina;
+      const inicio = (pagina - 1) * rowsPerPage;
+      const fin = inicio + rowsPerPage;
+      const pageData = paginatedData.slice(inicio, fin);
+
+      if (!pageData.length) {
+        document.getElementById("tabla-container").innerHTML = "<p>No hay datos para mostrar.</p>";
+        return;
+      }
+
+      let table = "<table><thead><tr>";
+            
+      Object.keys(pageData[0]).forEach(key => {
+        const label = headersDelEndpoint[key] || key.toUpperCase();
+        const flecha = ordenActual === key
+          ? (ordenAscendente ? '▲' : '▼')
+          : '⇅'; // Indicador neutro
+
+        table += `<th class="sortable" onclick="ordenarPor('${key}')" style="cursor:pointer">
+                    ${label} <span style="color:#40E0D0">${flecha}</span>
+                  </th>`;
+      });
+      table += "</tr></thead><tbody>";
+
+      const headers = Object.keys(pageData[0]);
+      pageData.forEach(row => {
+        table += '<tr>';
+        headers.forEach(key => {
+          const val = row[key] ?? "";
+          if (key.toLowerCase().startsWith('imp_') && !isNaN(val)) {
+            const num = parseFloat(val);
+            const cellContent = num.toLocaleString('es-AR', {
+              style: 'currency',
+              currency: 'ARS',
+              minimumFractionDigits: 2
+            });
+            table += `<td class="importe">${cellContent}</td>`;
+          } else {
+            table += `<td>${val}</td>`;
+          }
+        });
+        table += '</tr>';
+      });
+
+      table += "</tbody></table>";
+      document.getElementById("tabla-wrapper").style.display = "block";
+      document.getElementById("tabla-container").innerHTML = table;
+
+      mostrarPaginacion();
+    }
+
+    function mostrarPaginacion() {
+      const totalPages = Math.ceil(paginatedData.length / rowsPerPage);
+      let html = "";
+
+      html += `<div class="pagination"><button onclick="anteriorPagina()" ${currentPage === 1 ? "disabled" : ""}>Anterior</button>`;
+      html += `<span>Página ${currentPage} de ${totalPages}</span>`;
+      html += `<button onclick="siguientePagina()" ${currentPage === totalPages ? "disabled" : ""}>Siguiente</button></div>`;
+
+      document.getElementById("paginacion").innerHTML = html;
+    }
+
+    function anteriorPagina() {
+      if (currentPage > 1) {
+        mostrarPagina(currentPage - 1);
+      }
+    }
+
+    function siguientePagina() {
+      const totalPages = Math.ceil(paginatedData.length / rowsPerPage);
+      if (currentPage < totalPages) {
+        mostrarPagina(currentPage + 1);
+      }
+    }
+
+    function ordenarPor(campo) {
+      if (ordenActual === campo) {
+        ordenAscendente = !ordenAscendente;
+      } else {
+        ordenActual = campo;
+        ordenAscendente = true;
+      }
+
+      paginatedData.sort((a, b) => {
+        const valorA = a[campo];
+        const valorB = b[campo];
+
+        if (typeof valorA === 'number' && typeof valorB === 'number') {
+          return ordenAscendente ? valorA - valorB : valorB - valorA;
+        } else {
+          return ordenAscendente
+            ? String(valorA).localeCompare(String(valorB))
+            : String(valorB).localeCompare(String(valorA));
+        }
+      });
+
+      mostrarPagina(currentPage);
+    }
+
+
+    function exportarExcel() {
+      if (!paginatedData.length) return;
+
+      const wb = XLSX.utils.book_new();
+      const ws = {};
+      const headers = Object.keys(paginatedData[0]);
+
+      headers.forEach((h, colIdx) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIdx });
+        ws[cellRef] = { v: h, t: 's' };
+      });
+
+      paginatedData.forEach((row, rowIdx) => {
+        headers.forEach((key, colIdx) => {
+          const value = row[key];
+          const cellRef = XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx });
+          const esTextoForzado = (
+            (typeof value === 'number' && value.toString().length > 20) ||
+            (typeof value === 'string' && /^\d{21,}$/.test(value))
+          );
+          ws[cellRef] = {
+            v: value,
+            t: esTextoForzado ? 's' : (typeof value === 'number' ? 'n' : 's')
+          };
+        });
+      });
+
+      ws['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: paginatedData.length, c: headers.length - 1 }
+      });
+
+      XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+      const filename = `${endpointName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    }
+
+    window.addEventListener('scroll', function() {
+            const header = document.querySelector('.main-header');
+            // Si el scroll vertical es mayor a 50px, añade la clase 'shrink'
+            if (window.scrollY > 50) {
+                header.classList.add('shrink');
+            } else {
+                // Si no, la remueve
+                header.classList.remove('shrink');
+            }
+    });
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>

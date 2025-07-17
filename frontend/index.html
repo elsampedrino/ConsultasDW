@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <title>Consultas al DataWarehouse</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+
+    <header class="main-header">
+        <div class="header-content">
+            <div class="header-text">BP | DESARROLLO - SECTOR PUBLICO</div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1 class="main-title">Consultas al DataWareHouse</h1>
+
+        <div id="card-container" class="card-container"></div>
+    </main>
+
+    <script>
+        // --- SCRIPT PARA HEADER DINÁMICO ---
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('.main-header');
+            if (window.scrollY > 50) {
+                header.classList.add('shrink');
+            } else {
+                header.classList.remove('shrink');
+            }
+        });
+
+        // --- SCRIPT PARA GENERAR TARJETAS DESDE CONFIG.JSON ---
+        fetch('config.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const container = document.getElementById('card-container');
+
+                const imageSources = [
+                    'transferencias650.jpg',
+                    'Rendiciones.webp',
+                    'Entidades.jpg'
+                ];
+
+                data.grupos.forEach((grupo, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.backgroundImage = `url('${imageSources[index % imageSources.length]}')`;
+
+                    const cardContent = document.createElement('div');
+                    cardContent.className = 'card-content';
+
+                    const title = document.createElement('h2');
+                    title.className = 'card-title';
+                    title.textContent = grupo.nombre;
+
+                    const linksContainer = document.createElement('div');
+                    linksContainer.className = 'links-container';
+
+                    grupo.endpoints.forEach(endpoint => {
+                        const link = document.createElement('a');
+                        const tieneParametros = endpoint.parametros && endpoint.parametros.length > 0;
+
+                        // Si el endpoint tiene una página definida en config.json la uso
+                        const destino = endpoint.pagina || (tieneParametros ? 'forms.html' : 'directos.html');
+
+                        link.href = `${destino}?endpoint=${encodeURIComponent(endpoint.path)}`;
+                        link.textContent = endpoint.nombre;
+                        linksContainer.appendChild(link);
+                    });
+
+
+                    cardContent.appendChild(title);
+                    cardContent.appendChild(linksContainer);
+                    card.appendChild(cardContent);
+
+                    container.appendChild(card);
+                });
+            })
+            .catch(error => {
+                console.error('Error al cargar o procesar el config.json:', error);
+                const container = document.getElementById('card-container');
+                container.innerHTML = '<p style="text-align: center; color: red;">No se pudieron cargar las consultas. Revise el archivo de configuración.</p>';
+            });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+{
+    "data": [
+      {
+        "id_pago": 101,
+        "nombre_beneficiario": "Juan Pérez",
+        "monto": 12345.67,
+        "fecha_pago": "2025-06-24",
+        "estado": "Aprobado"
+      },
+      {
+        "id_pago": 102,
+        "nombre_beneficiario": "María Gómez",
+        "monto": 98765.43,
+        "fecha_pago": "2025-06-25",
+        "estado": "Pendiente"
+      }
+    ]
+  }
+  
