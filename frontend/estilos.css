@@ -26,10 +26,37 @@ body {
     padding-top: 50px; /* Espacio para el header fijo */
 }
 
+h1 {
+    text-align: center;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+h2 {
+    text-align: left;
+    color: var(--primary-green);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+h4 {
+    text-align: center;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
 .container {
     max-width: 1200px;
     margin: 20px auto;
     padding: 0 15px;
+}
+
+.container-datos {
+    /*margin: 10px auto;*/
+    margin-top: 40px;
+    padding: 0 10px;
 }
 
 /* --- HEADER UNIFICADO --- */
@@ -82,7 +109,8 @@ body {
 .main-title {
     text-align: center;
     color: var(--primary-green);
-    margin-bottom: 40px;
+    margin-top: 40px;
+    margin-bottom: 20px;
     font-size: 2.5em;
     font-weight: 700;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -284,7 +312,7 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
     overflow: auto;
-    margin-bottom: 25px;
+    margin-bottom: 10px;    
 }
 
 #tabla-wrapper {
@@ -342,7 +370,8 @@ th.sortable:hover {
 
 /* Estilo para la flecha de ordenamiento en las tablas */
 .sort-arrow {
-    color: var(--accent-green); /* Usamos un color de nuestra paleta */
+    /*color: var(--accent-green); /* Usamos un color de nuestra paleta */
+    color: #40E0D0; /* Usamos un color de nuestra paleta */
     margin-left: 8px;           /* Añadimos un pequeño espacio */
     font-weight: normal;        /* Hacemos que la flecha no sea tan gruesa */
     vertical-align: middle;     /* Aseguramos la alineación vertical */

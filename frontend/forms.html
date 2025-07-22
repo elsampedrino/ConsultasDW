@@ -34,14 +34,16 @@
  
   </main>
 
-  <div id="tabla-wrapper" style="display: none;">
-    <div id="total-registros" class="total-registros"></div>
-    <div id="tabla-container" class="grid-wrapper"></div>
-  </div>
-  <div class="pagination" id="pagination" style="display:none">
-    <button id="prev-btn">Anterior</button>
-    <span id="pagina-actual" style="margin: 0 10px;"></span>
-    <button id="next-btn">Siguiente</button>
+  <div class="container-datos">
+    <div id="tabla-wrapper" style="display: none;">
+      <div id="total-registros" class="total-registros"></div>
+      <div id="tabla-container" class="grid-wrapper"></div>
+    </div>
+    <div class="pagination" id="pagination" style="display:none">
+      <button id="prev-btn" class="btn btn-secondary">Anterior</button>
+      <span id="pagina-actual" style="margin: 0 10px;"></span>
+      <button id="next-btn" class="btn btn-secondary">Siguiente</button>
+    </div>
   </div>
 
   <script>
@@ -162,7 +164,7 @@
         fetch(`${window.location.origin}/api/Transferencias650/OrdenanteDesc?cuit=${cuit}`)
           .then(res => res.json())
           .then(data => {
-            document.getElementById('descripcion-ordenante').textContent = `Descripción Ordenante : ${data.desc_ordenante}`;
+            document.getElementById('descripcion-ordenante').textContent = `Ordenante : ${data.desc_ordenante}`;
           })
           .catch(() => {
             document.getElementById('descripcion-ordenante').textContent = 'No se pudo obtener la descripción del ordenante.';

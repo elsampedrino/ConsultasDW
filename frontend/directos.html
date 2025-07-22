@@ -23,17 +23,19 @@
     <div id="spinner">⏳ Consultando...</div>
     <!-- Botones -->
     <div id="botones" class="button-container"></div>
-          
+       
+  </main>
     <!-- Grilla de resultados -->
-    <div id="tabla-wrapper" style="display: none;">
-      <div id="total-registros" class="total-registros"></div>
-      <div id="tabla-container"></div>      
+    <div class="container-datos">
+      <div id="tabla-wrapper" style="display: none;">
+        <div id="total-registros" class="total-registros"></div>
+        <div id="tabla-container"></div>      
     </div>
-   
+     
     <!-- Paginación -->
     <div id="paginacion" class="paginacion"></div>
     
-</main>
+
 
   <script>
     let paginatedData = [];
@@ -109,8 +111,8 @@
           ? (ordenAscendente ? '▲' : '▼')
           : '⇅'; // Indicador neutro
 
-        table += `<th class="sortable" onclick="ordenarPor('${key}')" style="cursor:pointer">
-                    ${label} <span style="color:#40E0D0">${flecha}</span>
+        table += `<th class="sortable" onclick="ordenarPor('${key}')">
+                    ${label} <span class="sort-arrow">${flecha}</span>
                   </th>`;
       });
       table += "</tr></thead><tbody>";
@@ -146,9 +148,9 @@
       const totalPages = Math.ceil(paginatedData.length / rowsPerPage);
       let html = "";
 
-      html += `<div class="pagination"><button onclick="anteriorPagina()" ${currentPage === 1 ? "disabled" : ""}>Anterior</button>`;
+      html += `<div class="pagination"><button  class="btn btn-secondary" onclick="anteriorPagina()" ${currentPage === 1 ? "disabled" : ""}>Anterior</button>`;
       html += `<span>Página ${currentPage} de ${totalPages}</span>`;
-      html += `<button onclick="siguientePagina()" ${currentPage === totalPages ? "disabled" : ""}>Siguiente</button></div>`;
+      html += `<button  class="btn btn-secondary" onclick="siguientePagina()" ${currentPage === totalPages ? "disabled" : ""}>Siguiente</button></div>`;
 
       document.getElementById("paginacion").innerHTML = html;
     }
