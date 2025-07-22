@@ -3,6 +3,7 @@
   "grupos": [
     {
       "nombre": "Transferencias 650",
+      "imagen": "images/transferencias650.jpg",
       "endpoints": [
         {
           "nombre": "Lotes 650",
@@ -61,6 +62,7 @@
     },
     {
       "nombre": "Rendic/Movimientos ",
+      "imagen": "images/Rendiciones.webp",
       "endpoints": [
         {
           "nombre": "Rendiciones Entes Públicos/Privados",
@@ -114,6 +116,7 @@
     },
     {
       "nombre": "Entidades",
+      "imagen": "images/Entidades.jpg",
       "endpoints": [
         {
           "nombre": "Entes Publicos/Privados",

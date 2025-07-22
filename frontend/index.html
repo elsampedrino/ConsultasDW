@@ -42,21 +42,22 @@
             .then(data => {
                 const container = document.getElementById('card-container');
 
-                const imageSources = [
-                    'transferencias650.jpg',
-                    'Rendiciones.webp',
-                    'Entidades.jpg'
-                ];
-
-                data.grupos.forEach((grupo, index) => {
+                data.grupos.forEach(grupo => {
                     const card = document.createElement('div');
                     card.className = 'card';
-                    card.style.backgroundImage = `url('${imageSources[index % imageSources.length]}')`;
+
+                    // ✅ Asignar la imagen desde el campo 'imagen' del config.json
+                    if (grupo.imagen) {
+                        card.style.backgroundImage = `url('${grupo.imagen}')`;
+                    } else {
+                        // Imagen por defecto si no viene en el JSON
+                        card.style.backgroundImage = "url('images/default.jpg')";
+                    }
 
                     const cardContent = document.createElement('div');
                     cardContent.className = 'card-content';
 
-                    const title = document.createElement('h2');
+                    const title = document.createElement('h1');
                     title.className = 'card-title';
                     title.textContent = grupo.nombre;
 
@@ -74,7 +75,6 @@
                         link.textContent = endpoint.nombre;
                         linksContainer.appendChild(link);
                     });
-
 
                     cardContent.appendChild(title);
                     cardContent.appendChild(linksContainer);
