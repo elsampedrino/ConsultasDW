@@ -27,3 +27,6 @@ class MovCtas(BaseModel):
     imp_mvto: float
     imp_saldo: float
     desc_mvto: Optional[str]
+
+class ClienteDesc(BaseModel):
+    desc_cliente: str
