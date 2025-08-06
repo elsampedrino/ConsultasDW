@@ -1,7 +1,7 @@
 from http.client import HTTPException
 from fastapi import APIRouter, Query
 from app.database.teradata_connection import get_teradata_connection
-from app.models.rendiciones_model import RendicionEnte,MovCtas
+from app.models.rendiciones_model import RendicionEnte,MovCtas,ClienteDesc
 from typing import List, Optional
 import app.utils.helpers as helpers
 
@@ -140,6 +140,35 @@ def obtener_movimientos(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en /Rendiciones/MovCtas: {str(e)}")        
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.get("/Rendiciones/ClienteDesc", response_model=ClienteDesc)
+def obtener_descrip_cliente(
+    cod_ubicacion: int = Query(None),
+    cod_producto: int = Query(None),
+    num_cuenta: int = Query(None)
+):
+    try:
+        conn = get_teradata_connection()
+        cursor = conn.cursor()
+
+        sql = """
+            SELECT D.NOM_CLIENTE FROM P_SEM_VIEWS.D_CONTRATOS_ACTUAL C
+            INNER JOIN P_SEM_VIEWS.D_CLIENTES_ACTUAL D
+	            ON C.ID_D_CLIENTE = D.ID_D_CLIENTE
+            WHERE COD_UBICACION = ?
+            AND ID_D_PRODUCTO = ?
+            AND NUM_CUENTA = ?
+        """
+        cursor.execute(sql, (cod_ubicacion, cod_producto, num_cuenta))
+        result = cursor.fetchone()
+
+        return {"desc_cliente": result[0] if result else "Descripción de Cliente no encontrada"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
         conn.close()
