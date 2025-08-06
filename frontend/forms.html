@@ -36,6 +36,7 @@
 
   <div class="container-datos">
     <div id="tabla-wrapper" style="display: none;">
+      <div id="descripcion" class="descripcion" style="display:none"></div>
       <div id="total-registros" class="total-registros"></div>
       <div id="tabla-container" class="grid-wrapper"></div>
     </div>
@@ -54,6 +55,7 @@
     let headersDelEndpoint = {}; // creo esta variable para guardar los headers del endpoint
     let ordenActual = null;
     let ordenAscendente = true;
+    let apiBase = "";
     const urlParams = new URLSearchParams(window.location.search);
     const endpointName = urlParams.get('endpoint');
     const configPath = 'config.json';
@@ -61,6 +63,7 @@
     fetch(configPath)
       .then(response => response.json())
       .then(config => {
+        apiBase = config.api_base_url;
         const grupo = config.grupos.find(g => g.endpoints.some(e => e.path === endpointName));
         const endpoint = grupo.endpoints.find(e => e.path === endpointName);
         headersDelEndpoint = endpoint.headers || {};
@@ -83,16 +86,6 @@
           input.name = param.nombre;
           input.required = true;
           input.type = param.nombre.toLowerCase().includes('fec') || param.nombre.toLowerCase().includes('fecha') ? 'date' : 'text';
-
-          if (param.nombre === 'cuit') {
-            const descDiv = document.createElement('div');
-            descDiv.id = 'descripcion-ordenante';
-            descDiv.style.marginTop = '5px';
-            descDiv.style.fontWeight = 600;
-            descDiv.style.fontStyle = 'italic';
-            descDiv.style.color = 'var(--primary-green)';
-            group.appendChild(descDiv);
-          }
 
           const error = document.createElement('span');
           error.style.display = 'none';
@@ -161,16 +154,37 @@
       const cuit = cuitInput ? cuitInput.value.trim() : '';
       
       if (endpointName === 'Transferencias650/Prod650Vig' && cuit) {
-        fetch(`${window.location.origin}/api/Transferencias650/OrdenanteDesc?cuit=${cuit}`)
+        //fetch(`${window.location.origin}/api/Transferencias650/OrdenanteDesc?cuit=${cuit}`)
+        fetch(`${apiBase}/Transferencias650/OrdenanteDesc?cuit=${cuit}`)
           .then(res => res.json())
           .then(data => {
-            document.getElementById('descripcion-ordenante').textContent = `Ordenante : ${data.desc_ordenante}`;
+            descripcion.style.display = 'block';
+            document.getElementById('descripcion').textContent = `Ordenante : ${data.desc_ordenante}`;
           })
           .catch(() => {
-            document.getElementById('descripcion-ordenante').textContent = 'No se pudo obtener la descripción del ordenante.';
+            document.getElementById('descripcion').textContent = 'No se pudo obtener la descripción del ordenante.';
           });
       }
 
+      // 3.7 Busco la descripcion del Cliente si el endpoint es MovCtas
+      const cod_ubicacionInput = document.getElementById('cod_ubicacion');
+      const cod_ubicacion = cod_ubicacionInput ? cod_ubicacionInput.value : '';
+      const cod_productoInput = document.getElementById('cod_producto');
+      const cod_producto = cod_productoInput ? cod_productoInput.value : '';
+      const num_cuentaInput = document.getElementById('num_cuenta');
+      const num_cuenta = num_cuentaInput ? num_cuentaInput.value : '';
+            
+      if (endpointName === 'Rendiciones/MovCtas' && cod_ubicacion) {
+        fetch(`${apiBase}/Rendiciones/ClienteDesc?cod_ubicacion=${cod_ubicacion}&cod_producto=${cod_producto}&num_cuenta=${num_cuenta}`)
+          .then(res => res.json())
+          .then(data => {
+            descripcion.style.display = 'block';
+            document.getElementById('descripcion').textContent = `Titular : ${data.desc_cliente}`;
+          })
+          .catch(() => {
+            document.getElementById('descripcion').textContent = 'No se pudo obtener la descripción del Titular.';
+          });
+      }
 
       // 4. Armar parámetros solo con campos no vacíos
       const params = new URLSearchParams();
@@ -181,8 +195,6 @@
       });
 
       // 5. Llamar al endpoint
-      const apiBase = `${window.location.origin}/api`;
-            
       fetch(`${apiBase}/${path}?${params.toString()}`)
         .then(res => res.json())
         .then(data => {
@@ -342,72 +354,40 @@
     }
 
     function exportarExcel() {
+      if (!paginatedData.length) return;
+
       const wb = XLSX.utils.book_new();
-      const enteId = document.getElementById('ente-select').value.trim().split(' ')[0];
-      const disenioId = disenioSeleccionado;
+      const ws = {};
+      const headers = Object.keys(paginatedData[0]);
 
-      // 🟢 Agregar solo la fila seleccionada de Diseños
-      const diseniosTable = document.getElementById('tabla-disenos').querySelector('table');
-      if (diseniosTable) {
-          const headers = Array.from(diseniosTable.rows[0].cells).map(cell => cell.innerText);
-          const filaSeleccionada = Array.from(diseniosTable.querySelectorAll('tr')).find(tr => {
-              const firstCell = tr.cells[0];
-              return firstCell && firstCell.innerText == disenioId;
-          });
-          if (filaSeleccionada) {
-              const rowData = Array.from(filaSeleccionada.cells).map(cell => cell.innerText);
-              const ws = XLSX.utils.aoa_to_sheet([headers]); // Solo headers
+      headers.forEach((h, colIdx) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIdx });
+        ws[cellRef] = { v: h, t: 's' };
+      });
 
-              // 📝 Forzar cada celda manualmente
-              rowData.forEach((value, colIdx) => {
-                  const cellRef = XLSX.utils.encode_cell({ r: 1, c: colIdx });
-                  const esTextoForzado =
-                      (typeof value === 'number' && value.toString().length > 20) || // Nros muy largos
-                      (typeof value === 'string' && (
-                          /^\d+$/.test(value) ||        // Solo dígitos
-                          /^0\d+/.test(value) ||       // Con ceros a la izquierda
-                          /\d{5,}/.test(value)         // Secuencias largas
-                      ));
-                  ws[cellRef] = {
-                      v: value,
-                      t: esTextoForzado ? 's' : 's' // Fuerza todo como string
-                  };
-              });
+      paginatedData.forEach((row, rowIdx) => {
+        headers.forEach((key, colIdx) => {
+          const value = row[key];
+          const cellRef = XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx });
+          const esTextoForzado = (
+            (typeof value === 'number' && value.toString().length > 20) ||
+            (typeof value === 'string' && /^\d{21,}$/.test(value))
+          );
+          ws[cellRef] = {
+            v: value,
+            t: esTextoForzado ? 's' : (typeof value === 'number' ? 'n' : 's')
+          };
+        });
+      });
 
-              XLSX.utils.book_append_sheet(wb, ws, 'Diseño');
-          }
-      }
+      ws['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: paginatedData.length, c: headers.length - 1 }
+      });
 
-      function agregarHoja(tablaId, nombreHoja) {
-          const tabla = document.getElementById(tablaId).querySelector('table');
-          if (tabla) {
-              const ws = XLSX.utils.aoa_to_sheet([]);
-              const rows = Array.from(tabla.rows);
-              rows.forEach((tr, rowIdx) => {
-                  Array.from(tr.cells).forEach((cell, colIdx) => {
-                      const value = cell.innerText;
-                      const cellRef = XLSX.utils.encode_cell({ r: rowIdx, c: colIdx });
-                      const esTextoForzado =
-                          (typeof value === 'number' && value.toString().length > 20) ||
-                          (typeof value === 'string' && (
-                              /^\d+$/.test(value) ||        // Solo dígitos
-                              /^0\d+/.test(value) ||       // Con ceros a la izquierda
-                              /\d{5,}/.test(value)         // Secuencias largas
-                          ));
-                      ws[cellRef] = {
-                          v: value,
-                          t: esTextoForzado ? 's' : 's' // Fuerza todo como string
-                      };
-                  });
-              });
-              XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
-          }
-      }
-
-      agregarHoja('tabla-detalles', 'Detalle Diseño');
-      agregarHoja('tabla-config', 'Configuración Cobranza');
-
-      XLSX.writeFile(wb, `ConveniosEnte${enteId}_Diseño${disenioId}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+      const filename = `${endpointName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
     }
 
 
