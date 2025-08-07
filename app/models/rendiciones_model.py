@@ -30,3 +30,18 @@ class MovCtas(BaseModel):
 
 class ClienteDesc(BaseModel):
     desc_cliente: str
+
+class RendicionGob(BaseModel):
+    fecha_pago: Optional[date]
+    fecha_rendicion: Optional[date]
+    cod_banco: Optional[int]
+    cod_ubicacion: Optional[int]
+    num_terminal: Optional[int]
+    num_comprob: Optional[str]
+    imp_cobrado: Optional[float]
+    imp_retencion: Optional[float]
+    imp_comision: Optional[float]
+    cod_barra: Optional[str]    
+    forma_pago: Optional[str]
+    estado_rendicion: Optional[str]
+    
