@@ -1,7 +1,7 @@
 from http.client import HTTPException
 from fastapi import APIRouter, Query
 from app.database.teradata_connection import get_teradata_connection
-from app.models.rendiciones_model import RendicionEnte,MovCtas,ClienteDesc
+from app.models.rendiciones_model import RendicionEnte,MovCtas,ClienteDesc,RendicionGob
 from typing import List, Optional
 import app.utils.helpers as helpers
 
@@ -169,6 +169,43 @@ def obtener_descrip_cliente(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.get("/Rendiciones/RendicionGob", response_model=List[RendicionGob])
+def obtener_rend_gobierno(cod_barra: str = Query(...)):
+    try:
+        conn = get_teradata_connection()
+        cursor = conn.cursor()
+
+        sql = """
+           SELECT D.fec_evento AS fecha_pago, D.fec_rendicion_gobierno AS fecha_rendicion, D.cod_banco,
+            D.cod_ubicacion, D.num_terminal_gobierno AS num_terminal, D.num_comprobante_gobierno AS num_comprob,
+            D.mto_recaudacion_gobierno AS imp_cobrado, D.mto_retencion_gobierno AS imp_retencion,
+            D.mto_comision_gobierno AS imp_comision, D.cod_barra_gobierno AS cod_barra,
+            CASE
+                WHEN D.cod_situacion_cheque_gobierno = 0 THEN 'EFECTIVO'
+                WHEN D.cod_situacion_cheque_gobierno = 8 THEN 'BOTON PAGO'
+                WHEN D.cod_situacion_cheque_gobierno = 2 THEN 'CHEQ CONF'
+                WHEN D.cod_situacion_cheque_gobierno = 3 THEN 'CHEQ RECH'
+            END AS forma_pago,
+            CASE
+                WHEN D.cod_estado_rendicion_gobierno = 1 THEN 'RENDIDO'
+                WHEN D.cod_estado_rendicion_gobierno = 2 THEN 'DEVUELTO A SUC'
+                WHEN D.cod_estado_rendicion_gobierno = 3 THEN 'PENDIENTE'
+                WHEN D.cod_estado_rendicion_gobierno = 4 THEN 'RENDIDO A CTA BOLSA'
+            END AS estado_rendicion
+            FROM P_SEM_VIEWS.f_recaudaciones_gobierno D
+            WHERE D.cod_barra_gobierno = ?
+            ORDER BY D.fec_rendicion_gobierno, D.cod_banco, D.cod_ubicacion
+        """
+        cursor.execute(sql, (cod_barra,))
+        results = helpers.query_to_dict_list(cursor)
+        return results
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en /Rendiciones/RendicionGob: {str(e)}") 
     finally:
         cursor.close()
         conn.close()
