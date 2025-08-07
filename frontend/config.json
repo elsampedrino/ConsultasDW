@@ -1,5 +1,6 @@
 {
   "titulo": "API de Consultas DW",
+  "api_base_url": "http://10.6.2.128:8000/api",
   "grupos": [
     {
       "nombre": "Transferencias 650",
@@ -73,6 +74,31 @@
             { "nombre": "cod_ubicacion", "label": "Código Sucursal", "tipo": "int", "opcional": true },
             { "nombre": "fec_ini_rend", "label": "Fecha Rendición Desde", "tipo": "date" },
             { "nombre": "fec_fin_rend", "label": "Fecha Rendición Hasta", "tipo": "date" }            
+          ],
+          "headers": {
+            "cod_ente": "Ente",
+            "cod_subente": "SubEnte",
+            "fecha_pago": "Fec Pago",
+            "fecha_rendicion": "Fec Rendición",
+            "cod_banco": "Banco",
+            "cod_ubicacion": "Sucursal",
+            "num_terminal": "Terminal",
+            "num_comprobante": "Comprobante",
+            "imp_cobrado": "Imp Cobrado",
+            "imp_retencion": "Imp Retención",
+            "imp_comision": "Imp Comisión",
+            "cod_barra": "Cod Barra",
+            "banco_cheque": "Bco Cheque",
+            "num_cheque": "Num Cheque",
+            "estado_rendicion": "Estad Rendi",
+            "forma_pago": "Form Pago"            
+          }
+        },        
+        {
+          "nombre": "Rendiciones Gob. Electrónico",
+          "path": "Rendiciones/RendicionGob",
+          "parametros": [
+            { "nombre": "cod_barra", "label": "Código de Barras", "tipo": "str"}            
           ],
           "headers": {
             "cod_ente": "Ente",
